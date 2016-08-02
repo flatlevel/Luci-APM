@@ -2817,7 +2817,8 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		}
 	}
 
-#if defined (CONFIG_ARCH_BOARD_PX4FMU_V1) || defined (CONFIG_ARCH_BOARD_PX4FMU_V4)
+#if defined (CONFIG_ARCH_BOARD_PX4FMU_V1) || defined (CONFIG_ARCH_BOARD_PX4FMU_V4) \
+		|| defined (CONFIG_ARCH_BOARD_LUCI_V1)
 
 	/* this runs at around 20Hz, full cycle is 16 ticks = 10/16Hz */
 	if (actuator_armed->armed) {
@@ -2831,10 +2832,17 @@ control_status_leds(vehicle_status_s *status_local, const actuator_armed_s *actu
 		}
 
 	} else {
+	#if !defined (CONFIG_ARCH_BOARD_LUCI_V1)
 		/* not ready to arm, blink at 10Hz */
 		if (leds_counter % 2 == 0) {
 			led_toggle(LED_BLUE);
 		}
+	#else
+		/* This is our only activity LED, blink a bit slower */
+		if (leds_counter % 10 == 0) {
+			led_toggle(LED_BLUE);
+		}
+  #endif
 	}
 
 #endif
@@ -3660,7 +3668,13 @@ void *commander_low_prio_loop(void *arg)
 				}
 
 			case vehicle_command_s::VEHICLE_CMD_START_RX_PAIR:
-				/* handled in the IO driver */
+			/* Set RC_DSM_BIND to initiate the binding process */
+				if ((int)cmd.param1 == 0) {
+					param_set(param_find("RC_DSM_BIND"), &cmd.param2);
+						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_ACCEPTED, command_ack_pub, command_ack);
+				} else {
+						answer_command(cmd, vehicle_command_s::VEHICLE_CMD_RESULT_FAILED, command_ack_pub, command_ack);
+				}
 				break;
 
 			default:

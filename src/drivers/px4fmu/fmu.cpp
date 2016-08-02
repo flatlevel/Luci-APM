@@ -909,6 +909,11 @@ PX4FMU::cycle()
 		sbus_config(_rcs_fd, false);
 		// disable CPPM input by mapping it away from the timer capture input
 		stm32_unconfiggpio(GPIO_PPM_IN);
+
+	#if defined(CONFIG_ARCH_BOARD_LUCI_V1)
+		// Luci needs the UART to be reinitialized in order to read properly.
+		dsm_bind(DSM_CMD_BIND_REINIT_UART, 0);
+	#endif
 #endif
 
 		_initialized = true;
@@ -3345,7 +3350,7 @@ fmu_main(int argc, char *argv[])
 		g_fmu->status();
 		exit(0);
 	}
-        
+
 	fprintf(stderr, "FMU: unrecognised command %s, try:\n", verb);
 #if defined(CONFIG_ARCH_BOARD_PX4FMU_V1)
 	fprintf(stderr,
